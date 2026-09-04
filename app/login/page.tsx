@@ -3,14 +3,25 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  CalendarDays,
+  CircleAlert,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Sparkles,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,9 +37,7 @@ export default function LoginPage() {
     redirectAuthenticatedUser();
   }, [router]);
 
-  async function handleLogin(
-    e: React.FormEvent<HTMLFormElement>
-  ) {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     setLoading(true);
@@ -37,7 +46,7 @@ export default function LoginPage() {
     const supabase = createClient();
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
 
@@ -45,7 +54,7 @@ export default function LoginPage() {
       setError(
         error.message.toLowerCase().includes("email not confirmed")
           ? "Please confirm your email address before logging in."
-          : "Invalid email or password. Please try again."
+          : "Invalid email or password. Please check your credentials."
       );
       setLoading(false);
       return;
@@ -55,42 +64,53 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-md">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-12 selection:bg-primary/20 selection:text-primary">
+      {/* Ambient background glows */}
+      <div className="ambient-glow -top-32 -left-32 h-96 w-96 bg-indigo-500/15" />
+      <div className="ambient-glow -bottom-32 -right-32 h-96 w-96 bg-purple-500/15" />
 
-        {/* Header */}
+      {/* Top right theme toggle */}
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md">
+        {/* Brand Header */}
         <div className="mb-8 text-center">
           <Link
             href="/"
-            className="text-2xl font-bold"
+            className="inline-flex items-center gap-2.5 transition-transform hover:scale-105 active:scale-95"
           >
-            RememberMe
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25">
+              <CalendarDays className="h-6 w-6" />
+            </div>
+            <span className="font-heading text-2xl font-extrabold tracking-tight text-foreground">
+              Remember<span className="gradient-text">Me</span>
+            </span>
           </Link>
 
-          <h1 className="mt-8 text-3xl font-bold">
+          <h1 className="font-heading mt-6 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
             Welcome back
           </h1>
-
-          <p className="mt-2 text-muted-foreground">
-            Log in to manage your important dates.
+          <p className="mt-1.5 text-xs text-muted-foreground sm:text-sm">
+            Log in to manage your circle and upcoming dates.
           </p>
         </div>
 
-        {/* Form */}
+        {/* Login Glass Card */}
         <form
           onSubmit={handleLogin}
-          className="space-y-5 rounded-xl border p-6"
+          className="glass-panel overflow-hidden rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl"
         >
-
           {/* Email */}
-          <div className="space-y-2">
+          <div>
             <label
               htmlFor="email"
-              className="text-sm font-medium"
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground"
             >
-              Email
+              <Mail className="h-3.5 w-3.5 text-primary" />
+              Email Address
             </label>
-
             <input
               id="email"
               type="email"
@@ -99,66 +119,91 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               required
-              className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
+              className="mt-2 h-11 w-full rounded-2xl border border-border/70 bg-card/80 px-4 text-sm font-medium outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 backdrop-blur-md"
             />
           </div>
 
           {/* Password */}
-          <div className="space-y-2">
-            <label
-              htmlFor="password"
-              className="text-sm font-medium"
-            >
-              Password
-            </label>
+          <div>
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground"
+              >
+                <Lock className="h-3.5 w-3.5 text-primary" />
+                Password
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
 
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
-            />
+            <div className="relative mt-2">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                className="h-11 w-full rounded-2xl border border-border/70 bg-card/80 pl-4 pr-11 text-sm font-medium outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 backdrop-blur-md"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Error */}
+          {/* Error Alert */}
           {error && (
-            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
-              {error}
+            <div className="flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive">
+              <CircleAlert className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          {/* Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-50"
-          >
-            {loading ? "Logging in..." : "Log in"}
-          </button>
-
+          {/* Submit CTA */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            >
+              {loading ? (
+                "Signing in..."
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          <Link href="/forgot-password" className="font-medium text-foreground underline">
-            Forgot your password?
-          </Link>
-        </p>
-
-        {/* Register */}
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+        {/* Register CTA */}
+        <p className="mt-6 text-center text-xs text-muted-foreground sm:text-sm">
+          Don&apos;t have an account yet?{" "}
           <Link
             href="/register"
-            className="font-medium text-foreground underline"
+            className="font-bold text-primary hover:underline"
           >
-            Create account
+            Create free account
           </Link>
         </p>
-
       </div>
     </main>
   );

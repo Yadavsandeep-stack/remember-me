@@ -3,21 +3,32 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  CircleAlert,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  User,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function handleRegister(
-    e: React.FormEvent<HTMLFormElement>
-  ) {
+  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     setLoading(true);
@@ -27,7 +38,7 @@ export default function RegisterPage() {
     const supabase = createClient();
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/login`,
@@ -38,7 +49,9 @@ export default function RegisterPage() {
     });
 
     if (error) {
-      setError("We couldn't create your account. Please check your details and try again.");
+      setError(
+        "We couldn't create your account. Please check your details and try again."
+      );
       setLoading(false);
       return;
     }
@@ -50,7 +63,7 @@ export default function RegisterPage() {
 
     if (data.user) {
       setMessage(
-        "Account created. Check your email, confirm your address, then you will be signed in."
+        "Account created! Please check your email to confirm your address, then sign in."
       );
     }
 
@@ -58,40 +71,53 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-md">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-12 selection:bg-primary/20 selection:text-primary">
+      {/* Ambient background glows */}
+      <div className="ambient-glow -top-32 -right-32 h-96 w-96 bg-purple-500/15" />
+      <div className="ambient-glow -bottom-32 -left-32 h-96 w-96 bg-indigo-500/15" />
 
+      {/* Top right theme toggle */}
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md">
+        {/* Brand Header */}
         <div className="mb-8 text-center">
           <Link
             href="/"
-            className="text-2xl font-bold"
+            className="inline-flex items-center gap-2.5 transition-transform hover:scale-105 active:scale-95"
           >
-            RememberMe
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25">
+              <CalendarDays className="h-6 w-6" />
+            </div>
+            <span className="font-heading text-2xl font-extrabold tracking-tight text-foreground">
+              Remember<span className="gradient-text">Me</span>
+            </span>
           </Link>
 
-          <h1 className="mt-8 text-3xl font-bold">
+          <h1 className="font-heading mt-6 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
             Create your account
           </h1>
-
-          <p className="mt-2 text-muted-foreground">
-            Start remembering important dates.
+          <p className="mt-1.5 text-xs text-muted-foreground sm:text-sm">
+            Start remembering the dates and people who matter.
           </p>
         </div>
 
+        {/* Register Glass Card */}
         <form
           onSubmit={handleRegister}
-          className="space-y-5 rounded-xl border p-6"
+          className="glass-panel overflow-hidden rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl"
         >
-
-          {/* Name */}
-          <div className="space-y-2">
+          {/* Full Name */}
+          <div>
             <label
               htmlFor="name"
-              className="text-sm font-medium"
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground"
             >
-              Full name
+              <User className="h-3.5 w-3.5 text-primary" />
+              Full Name
             </label>
-
             <input
               id="name"
               type="text"
@@ -100,19 +126,19 @@ export default function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
               autoComplete="name"
               required
-              className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
+              className="mt-2 h-11 w-full rounded-2xl border border-border/70 bg-card/80 px-4 text-sm font-medium outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 backdrop-blur-md"
             />
           </div>
 
           {/* Email */}
-          <div className="space-y-2">
+          <div>
             <label
               htmlFor="email"
-              className="text-sm font-medium"
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground"
             >
-              Email
+              <Mail className="h-3.5 w-3.5 text-primary" />
+              Email Address
             </label>
-
             <input
               id="email"
               type="email"
@@ -121,66 +147,90 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               required
-              className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
+              className="mt-2 h-11 w-full rounded-2xl border border-border/70 bg-card/80 px-4 text-sm font-medium outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 backdrop-blur-md"
             />
           </div>
 
           {/* Password */}
-          <div className="space-y-2">
+          <div>
             <label
               htmlFor="password"
-              className="text-sm font-medium"
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground"
             >
-              Password
+              <Lock className="h-3.5 w-3.5 text-primary" />
+              Password (min. 6 characters)
             </label>
-
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-              minLength={6}
-              className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
-            />
+            <div className="relative mt-2">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+                minLength={6}
+                className="h-11 w-full rounded-2xl border border-border/70 bg-card/80 pl-4 pr-11 text-sm font-medium outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 backdrop-blur-md"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Error */}
+          {/* Alerts */}
           {error && (
-            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
-              {error}
+            <div className="flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive">
+              <CircleAlert className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          {/* Success */}
           {message && (
-            <div className="rounded-md border border-green-500/30 bg-green-500/10 p-3 text-sm">
-              {message}
+            <div className="flex items-start gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{message}</span>
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Create account"}
-          </button>
-
+          {/* Submit CTA */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            >
+              {loading ? (
+                "Creating account..."
+              ) : (
+                <>
+                  <span>Create Account</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        {/* Login CTA */}
+        <p className="mt-6 text-center text-xs text-muted-foreground sm:text-sm">
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-foreground underline"
+            className="font-bold text-primary hover:underline"
           >
-            Login
+            Log in
           </Link>
         </p>
-
       </div>
     </main>
   );

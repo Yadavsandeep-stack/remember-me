@@ -2,26 +2,37 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
   Bell,
   Cake,
+  Calendar,
   CalendarDays,
+  Clock,
   Edit,
   Mail,
+  MoreVertical,
+  PartyPopper,
   Phone,
   Plus,
+  Sparkles,
+  Tag,
   Trash2,
   User,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { daysUntil, getNextOccurrence, formatDate } from "@/lib/dates";
+import { AppHeader } from "@/components/app-header";
+import { AvatarBadge } from "@/components/ui/avatar-badge";
+import { BadgePill } from "@/components/ui/badge-pill";
 
 type Person = {
   id: string;
   name: string;
   relationship: string | null;
-  dob: string;
+  dob: string | null;
   email: string | null;
   phone: string | null;
   notes: string | null;
@@ -39,18 +50,14 @@ type Event = {
 export default function PersonDetailsPage() {
   const router = useRouter();
   const params = useParams();
-
   const personId = params.id as string;
 
   const [person, setPerson] = useState<Person | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [eventActionMessage, setEventActionMessage] = useState("");
-  const [deletingEventId, setDeletingEventId] = useState<string | null>(
-    null
-  );
+  const [deleting, setDeleting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadPerson() {
@@ -84,9 +91,7 @@ export default function PersonDetailsPage() {
       // Load events for this person
       const { data: eventData, error: eventError } = await supabase
         .from("events")
-        .select(
-          "id, title, event_type, event_date, is_recurring, description"
-        )
+        .select("id, title, event_type, event_date, is_recurring, description")
         .eq("person_id", personId)
         .eq("user_id", user.id)
         .order("event_date", { ascending: true });
@@ -104,19 +109,36 @@ export default function PersonDetailsPage() {
     loadPerson();
   }, [personId, router]);
 
-  function formatBirthday(date: string) {
-    return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "long",
-    });
+  function getNextBirthday(dob: string) {
+    const today = new Date();
+    const birthDate = new Date(`${dob}T00:00:00`);
+
+    let birthday = new Date(
+      today.getFullYear(),
+      birthDate.getMonth(),
+      birthDate.getDate()
+    );
+
+    if (birthday < today) {
+      birthday = new Date(
+        today.getFullYear() + 1,
+        birthDate.getMonth(),
+        birthDate.getDate()
+      );
+    }
+
+    return birthday;
   }
 
-  function formatEventDate(date: string) {
-    return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+  function getDaysUntilBirthday(dob: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const birthday = getNextBirthday(dob);
+    birthday.setHours(0, 0, 0, 0);
+
+    const difference = birthday.getTime() - today.getTime();
+    return Math.ceil(difference / (1000 * 60 * 60 * 24));
   }
 
   function calculateAge(dob: string) {
@@ -124,13 +146,11 @@ export default function PersonDetailsPage() {
     const today = new Date();
 
     let age = today.getFullYear() - birthDate.getFullYear();
-
     const monthDifference = today.getMonth() - birthDate.getMonth();
 
     if (
       monthDifference < 0 ||
-      (monthDifference === 0 &&
-        today.getDate() < birthDate.getDate())
+      (monthDifference === 0 && today.getDate() < birthDate.getDate())
     ) {
       age--;
     }
@@ -138,432 +158,419 @@ export default function PersonDetailsPage() {
     return age;
   }
 
-  async function handleDelete() {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${person?.name}? This cannot be undone.`
-    );
+  async function handleDeletePerson() {
+    try {
+      setDeleting(true);
+      const supabase = createClient();
+      const { error: deleteError } = await supabase
+        .from("people")
+        .delete()
+        .eq("id", personId);
 
-    if (!confirmed) return;
-
-    const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push("/login");
-      return;
+      if (deleteError) throw deleteError;
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to delete person.");
+      setDeleting(false);
+      setDeleteModalOpen(false);
     }
-
-    const { error } = await supabase
-      .from("people")
-      .delete()
-      .eq("id", personId)
-      .eq("user_id", user.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    router.push("/dashboard");
   }
 
-  async function handleDeleteEvent(event: Event) {
+  async function handleDeleteEvent(eventId: string) {
     const confirmed = window.confirm(
-      `Delete "${event.title}"? This action cannot be undone.`
+      "Are you sure you want to delete this event?"
     );
-
     if (!confirmed) return;
 
-    setDeletingEventId(event.id);
-    setEventActionMessage("");
-
     const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    const { error: deleteError } = await supabase
+    const { error: delErr } = await supabase
       .from("events")
       .delete()
-      .eq("id", event.id)
-      .eq("user_id", user.id)
-      .eq("person_id", personId);
+      .eq("id", eventId);
 
-    if (deleteError) {
-      setEventActionMessage("We couldn't delete this event. Please try again.");
-      setDeletingEventId(null);
+    if (delErr) {
+      setError("Failed to delete event.");
       return;
     }
 
-    setEvents((currentEvents) =>
-      currentEvents.filter((currentEvent) => currentEvent.id !== event.id)
-    );
-    setEventActionMessage("Event deleted successfully.");
-    setDeletingEventId(null);
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
+        <AppHeader />
         <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-          <div className="h-5 w-36 animate-pulse rounded bg-muted" />
-
-          <div className="mt-8 h-56 animate-pulse rounded-2xl border bg-background" />
-
-          <div className="mt-6 h-72 animate-pulse rounded-2xl border bg-background" />
-        </div>
-      </main>
-    );
-  }
-
-  if (error || !person) {
-    return (
-      <main className="min-h-screen bg-muted/30">
-        <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-            <User className="h-6 w-6" />
+          <div className="h-44 animate-pulse rounded-3xl border border-border/60 bg-card/60" />
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div className="h-64 animate-pulse rounded-3xl border border-border/60 bg-card/60" />
+            <div className="h-64 animate-pulse rounded-3xl border border-border/60 bg-card/60" />
           </div>
-
-          <h1 className="mt-5 text-2xl font-bold">
-            Person not found
-          </h1>
-
-          <p className="mt-2 text-muted-foreground">
-            {error || "We couldn't find this person."}
-          </p>
-
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </button>
         </div>
-      </main>
+      </div>
     );
   }
+
+  if (!person) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <AppHeader />
+        <div className="mx-auto max-w-xl px-4 py-20 text-center">
+          <p className="text-destructive font-semibold">Person not found.</p>
+          <Link
+            href="/dashboard"
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const daysToBirthday = person.dob ? getDaysUntilBirthday(person.dob) : null;
+  const currentAge = person.dob ? calculateAge(person.dob) : null;
 
   return (
-    <main className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="border-b bg-background">
-        <div className="mx-auto flex h-16 max-w-4xl items-center px-4 sm:px-6">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary">
+      <AppHeader />
+
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Back navigation */}
+        <div className="mb-6">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground transition hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </button>
+            Back to Directory
+          </Link>
         </div>
-      </header>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-10">
-        {/* Person header */}
-        <section className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-center gap-4">
-              {/* Avatar */}
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-2xl font-bold text-primary">
-                {person.name.charAt(0).toUpperCase()}
-              </div>
+        {/* Error notification */}
+        {error && (
+          <div className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-medium text-destructive">
+            {error}
+          </div>
+        )}
+
+        {/* Hero Profile Card */}
+        <section className="glass-panel relative mb-8 overflow-hidden rounded-3xl p-6 sm:p-8">
+          <div className="ambient-glow -top-16 -right-16 h-48 w-48 bg-indigo-500/15" />
+          
+          <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
+            {/* Left: Avatar & Identity */}
+            <div className="flex items-center gap-5">
+              <AvatarBadge name={person.name} size="xl" />
 
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {person.name}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="font-heading text-2xl font-extrabold sm:text-3xl text-foreground">
+                    {person.name}
+                  </h1>
+                  {person.relationship && (
+                    <BadgePill
+                      label={person.relationship}
+                      variant="relationship"
+                      size="md"
+                    />
+                  )}
+                </div>
 
-                {person.relationship && (
-                  <p className="mt-1 text-muted-foreground">
-                    {person.relationship}
-                  </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  {currentAge !== null && (
+                    <span className="font-semibold text-foreground">
+                      {currentAge} years old
+                    </span>
+                  )}
+                  {person.email && <span>• {person.email}</span>}
+                  {person.phone && <span>• {person.phone}</span>}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Quick Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link
+                href={`/people/${person.id}/reminder`}
+                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-border/70 bg-card/80 px-4 text-xs font-semibold text-foreground backdrop-blur-md transition-all hover:bg-muted/80 hover:scale-105 active:scale-95 shadow-xs"
+              >
+                <Bell className="h-4 w-4 text-primary" />
+                Reminders
+              </Link>
+
+              <Link
+                href={`/people/${person.id}/events/new`}
+                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 px-4 text-xs font-semibold text-white shadow-md shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95"
+              >
+                <Plus className="h-4 w-4" />
+                Add Milestone
+              </Link>
+
+              <Link
+                href={`/people/${person.id}/edit`}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 bg-card/80 text-muted-foreground transition-all hover:text-foreground hover:scale-105 active:scale-95 shadow-xs"
+                title="Edit profile"
+              >
+                <Edit className="h-4 w-4" />
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(true)}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 bg-card/80 text-muted-foreground transition-all hover:border-destructive/40 hover:text-destructive hover:scale-105 active:scale-95 shadow-xs"
+                title="Delete person"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Left Column (1 col): Countdown & Contact Details */}
+          <div className="space-y-6 lg:col-span-1">
+            {/* Birthday Spotlight */}
+            {person.dob ? (
+              <div className="glass-panel card-hover-lift rounded-3xl p-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Next Birthday
+                  </span>
+                  <Cake className="h-5 w-5 text-amber-500" />
+                </div>
+
+                <p className="font-heading mt-3 text-2xl font-bold">
+                  {new Date(`${person.dob}T00:00:00`).toLocaleDateString(
+                    "en-IN",
+                    { day: "numeric", month: "long" }
+                  )}
+                </p>
+
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {daysToBirthday === 0
+                    ? "Celebrating Today! 🎉"
+                    : daysToBirthday === 1
+                    ? "Happening Tomorrow!"
+                    : `${daysToBirthday} days remaining`}
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-border/60 flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Next turning:</span>
+                  <span className="font-semibold">
+                    {currentAge !== null ? currentAge + 1 : "?"} years old
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="glass-panel rounded-3xl p-6 text-center">
+                <Cake className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
+                <p className="mt-3 text-sm font-semibold">No birthday saved</p>
+                <Link
+                  href={`/people/${person.id}/edit`}
+                  className="mt-3 inline-block text-xs font-semibold text-primary hover:underline"
+                >
+                  + Add date of birth
+                </Link>
+              </div>
+            )}
+
+            {/* Contact & Notes Card */}
+            <div className="glass-panel rounded-3xl p-6">
+              <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                Contact & Notes
+              </h3>
+
+              <div className="mt-4 space-y-3.5 text-sm">
+                {person.email ? (
+                  <a
+                    href={`mailto:${person.email}`}
+                    className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/50 p-3 transition hover:border-primary/40 hover:bg-muted/60"
+                  >
+                    <Mail className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate text-xs font-medium">{person.email}</span>
+                  </a>
+                ) : null}
+
+                {person.phone ? (
+                  <a
+                    href={`tel:${person.phone}`}
+                    className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/50 p-3 transition hover:border-emerald-500/40 hover:bg-muted/60"
+                  >
+                    <Phone className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span className="truncate text-xs font-medium">{person.phone}</span>
+                  </a>
+                ) : null}
+
+                {person.notes && (
+                  <div className="rounded-2xl border border-border/50 bg-background/50 p-4">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Personal Notes
+                    </p>
+                    <p className="mt-2 text-xs leading-relaxed text-foreground whitespace-pre-wrap">
+                      {person.notes}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() =>
-                  router.push(`/people/${personId}/events/new`)
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-              >
-                <Plus className="h-4 w-4" />
-                Add event
-              </button>
-
-              <button
-                onClick={() =>
-                  router.push(`/people/${personId}/reminder`)
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-muted"
-              >
-                <Bell className="h-4 w-4" />
-                Reminder
-              </button>
-            </div>
           </div>
-        </section>
 
-        {/* Birthday */}
-        <section className="mt-6 rounded-2xl border bg-background p-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600">
-              <Cake className="h-5 w-5" />
-            </div>
-
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Birthday
-              </p>
-
-              <p className="mt-0.5 text-lg font-semibold">
-                {formatBirthday(person.dob)}
-              </p>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                {calculateAge(person.dob)} years old
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Contact information */}
-        {(person.email || person.phone) && (
-          <section className="mt-6 rounded-2xl border bg-background p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">
-              Contact information
-            </h2>
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {person.email && (
-                <div className="flex items-center gap-3 rounded-xl border p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Mail className="h-4 w-4" />
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">
-                      Email
-                    </p>
-
-                    <p className="mt-1 truncate text-sm font-medium">
-                      {person.email}
-                    </p>
-                  </div>
+          {/* Right Column (2 cols): Milestones & Events Timeline */}
+          <div className="lg:col-span-2">
+            <div className="glass-panel rounded-3xl p-6 sm:p-8">
+              <div className="flex items-center justify-between border-b border-border/60 pb-5">
+                <div>
+                  <h2 className="font-heading text-xl font-bold text-foreground">
+                    Milestones & Events ({events.length})
+                  </h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Anniversaries, graduations, and custom dates tracked for {person.name}.
+                  </p>
                 </div>
-              )}
 
-              {person.phone && (
-                <div className="flex items-center gap-3 rounded-xl border p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Phone className="h-4 w-4" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Phone
-                    </p>
-
-                    <p className="mt-1 text-sm font-medium">
-                      {person.phone}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Events */}
-        <section className="mt-6 overflow-hidden rounded-2xl border bg-background shadow-sm">
-          <div className="flex items-center justify-between gap-4 border-b p-6">
-            <div>
-              <h2 className="text-lg font-semibold">
-                Important dates
-              </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Birthdays, anniversaries and other memorable dates.
-              </p>
-            </div>
-
-            <button
-              onClick={() =>
-                router.push(`/people/${personId}/events/new`)
-              }
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition hover:bg-muted"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                Add event
-              </span>
-            </button>
-          </div>
-
-          {eventActionMessage && (
-            <div className="mx-6 mt-6 rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-700">
-              {eventActionMessage}
-            </div>
-          )}
-
-          {events.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                <CalendarDays className="h-5 w-5" />
+                <Link
+                  href={`/people/${person.id}/events/new`}
+                  className="inline-flex items-center gap-1.5 rounded-2xl border border-border/70 bg-card/80 px-3.5 py-2 text-xs font-semibold text-foreground backdrop-blur-md transition hover:bg-muted"
+                >
+                  <Plus className="h-3.5 w-3.5 text-primary" />
+                  Add Event
+                </Link>
               </div>
 
-              <h3 className="mt-4 font-semibold">
-                No important dates yet
-              </h3>
+              {events.length === 0 ? (
+                <div className="py-12 text-center">
+                  <Calendar className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
+                  <p className="mt-3 font-heading font-bold text-foreground">
+                    No custom events added yet
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Track anniversaries, promotions, or special dates for {person.name}.
+                  </p>
+                  <Link
+                    href={`/people/${person.id}/events/new`}
+                    className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                  >
+                    <Plus className="h-4 w-4" /> Add First Event
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  {events.map((event) => {
+                    const occurrence = getNextOccurrence({
+                      date: event.event_date,
+                      isRecurring: event.is_recurring,
+                    });
+                    const days = daysUntil(occurrence);
 
-              <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-                Add anniversaries, graduations, work anniversaries
-                or any other important date.
-              </p>
+                    return (
+                      <div
+                        key={event.id}
+                        className="glass-panel card-hover-lift rounded-2xl p-4.5 sm:p-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <CalendarDays className="h-5 w-5" />
+                          </div>
 
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="font-heading font-bold text-foreground">
+                                {event.title}
+                              </h4>
+                              <BadgePill
+                                label={event.event_type}
+                                variant="event"
+                                size="sm"
+                              />
+                              {event.is_recurring && (
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                  Yearly
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {formatDate(event.event_date, false)}
+                              {event.description && ` • ${event.description}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-3 sm:pt-0 border-border/50">
+                          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                            {days === 0
+                              ? "Today 🎉"
+                              : days === 1
+                              ? "Tomorrow"
+                              : `In ${days} days`}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            <Link
+                              href={`/people/${person.id}/events/${event.id}/edit`}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-border/60 text-muted-foreground transition hover:text-foreground"
+                              title="Edit event"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-border/60 text-muted-foreground transition hover:border-destructive/40 hover:text-destructive"
+                              title="Delete event"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Delete Person Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="glass-panel max-w-md rounded-3xl p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <Trash2 className="h-6 w-6" />
+            </div>
+
+            <h3 className="font-heading mt-4 text-xl font-bold">
+              Delete {person.name}?
+            </h3>
+
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              This will permanently delete this person, along with all associated milestones, custom events, and reminder configurations. This action cannot be undone.
+            </p>
+
+            <div className="mt-6 flex justify-center gap-3">
               <button
-                onClick={() =>
-                  router.push(`/people/${personId}/events/new`)
-                }
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                className="rounded-2xl border border-border/80 bg-card px-5 py-2.5 text-xs font-semibold text-foreground hover:bg-muted"
               >
-                <Plus className="h-4 w-4" />
-                Add your first event
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeletePerson}
+                disabled={deleting}
+                className="rounded-2xl bg-destructive px-5 py-2.5 text-xs font-semibold text-white shadow-md transition hover:opacity-90 disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Yes, Delete"}
               </button>
             </div>
-          ) : (
-            <div className="divide-y">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <CalendarDays className="h-5 w-5" />
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold">
-                        {event.title}
-                      </h3>
-
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {event.event_type}
-                      </p>
-
-                      <p className="mt-2 text-sm font-medium">
-                        {formatEventDate(event.event_date)}
-                      </p>
-
-                      {event.description && (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {event.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    {event.is_recurring ? (
-                      <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                        Every year
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                        One-time
-                      </span>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        router.push(
-                          `/people/${personId}/events/${event.id}/edit`
-                        )
-                      }
-                      aria-label={`Edit ${event.title}`}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition hover:bg-muted"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        router.push(
-                          `/people/${personId}/events/${event.id}/reminder`
-                        )
-                      }
-                      aria-label={`Configure a reminder for ${event.title}`}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition hover:bg-muted"
-                    >
-                      <Bell className="h-4 w-4" />
-                      Reminder
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteEvent(event)}
-                      disabled={deletingEventId === event.id}
-                      aria-label={`Delete ${event.title}`}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 px-3 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {deletingEventId === event.id ? "Deleting..." : "Delete"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Notes */}
-        {person.notes && (
-          <section className="mt-6 rounded-2xl border bg-background p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">
-              Notes
-            </h2>
-
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-              {person.notes}
-            </p>
-          </section>
-        )}
-
-        {/* Bottom actions */}
-        <section className="mt-6 flex flex-col gap-3 rounded-2xl border bg-background p-6 shadow-sm sm:flex-row">
-          <button
-  onClick={() => router.push(`/people/${personId}/edit`)}
-  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition hover:bg-muted"
->
-  <Edit className="h-4 w-4" />
-  Edit person
-</button>
-
-          <button
-            onClick={handleDelete}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-destructive/30 px-4 py-2.5 text-sm font-medium text-destructive transition hover:bg-destructive/10"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete person
-          </button>
-        </section>
-      </div>
-    </main>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

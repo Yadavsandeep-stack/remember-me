@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "./theme-toggle";
+import { Logo } from "./ui/logo";
 
 type AppHeaderProps = {
   userEmail?: string;
@@ -55,18 +56,7 @@ export function AppHeader({ userEmail, userName }: AppHeaderProps) {
             href="/dashboard"
             className="group flex items-center gap-2.5 transition-transform active:scale-95"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/25 transition-all group-hover:shadow-indigo-500/40">
-              <CalendarDays className="h-5 w-5 transition-transform group-hover:scale-110" />
-            </div>
-
-            <div className="flex flex-col">
-              <span className="font-heading text-lg font-bold tracking-tight text-foreground">
-                Remember<span className="gradient-text">Me</span>
-              </span>
-              <span className="hidden text-[10px] font-medium text-muted-foreground uppercase tracking-widest sm:block">
-                Milestone Suite
-              </span>
-            </div>
+            <Logo size="md" />
           </Link>
 
           {/* Desktop Nav Links */}

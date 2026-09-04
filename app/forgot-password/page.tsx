@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/ui/logo";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -56,14 +57,9 @@ export default function ForgotPasswordPage() {
         <div className="mb-8 text-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-2.5 transition-transform hover:scale-105 active:scale-95"
+            className="inline-flex items-center transition-transform hover:scale-105 active:scale-95"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25">
-              <CalendarDays className="h-6 w-6" />
-            </div>
-            <span className="font-heading text-2xl font-extrabold tracking-tight text-foreground">
-              Remember<span className="gradient-text">Me</span>
-            </span>
+            <Logo size="lg" />
           </Link>
 
           <h1 className="font-heading mt-6 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">

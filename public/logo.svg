@@ -1,0 +1,32 @@
+<svg width="280" height="64" viewBox="0 0 280 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgLogo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="50%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#EC4899" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="50%" stop-color="#A855F7" />
+      <stop offset="100%" stop-color="#EC4899" />
+    </linearGradient>
+  </defs>
+
+  <!-- Logo Mark Icon -->
+  <g transform="translate(4, 4)">
+    <rect width="56" height="56" rx="16" fill="url(#bgLogo)" />
+    <!-- Calendar Body -->
+    <rect x="12" y="16" width="32" height="28" rx="6" fill="#FFFFFF" fill-opacity="0.2" stroke="#FFFFFF" stroke-width="2" />
+    <line x1="12" y1="24" x2="44" y2="24" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.8" />
+    <rect x="18" y="12" width="3" height="6" rx="1.5" fill="#FFFFFF" />
+    <rect x="35" y="12" width="3" height="6" rx="1.5" fill="#FFFFFF" />
+    <!-- Heart Knot -->
+    <path d="M28 29C25 25.5 20 27 20 31C20 35 28 39 28 39C28 39 36 35 36 31C36 27 31 25.5 28 29Z" fill="#FFFFFF" />
+    <path d="M44 8L45 11.8L49 13L45 14.2L44 18L43 14.2L39 13L43 11.8L44 8Z" fill="#FFD700" />
+  </g>
+
+  <!-- Brand Typography -->
+  <text x="74" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', sans-serif" font-size="26" font-weight="800" fill="#0F172A" letter-spacing="-0.03em">
+    Remember<tspan fill="url(#textGrad)">Me</tspan>
+  </text>
+</svg>

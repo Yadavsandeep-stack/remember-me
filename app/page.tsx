@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/ui/logo";
 
 export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -56,14 +57,9 @@ export default function Home() {
         <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 py-4">
           <Link
             href="/"
-            className="flex items-center gap-3 transition-transform hover:scale-105 active:scale-95"
+            className="transition-transform hover:scale-105 active:scale-95"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25">
-              <CalendarDays className="h-5 w-5" />
-            </div>
-            <span className="font-heading text-xl font-bold tracking-tight text-foreground">
-              Remember<span className="gradient-text">Me</span>
-            </span>
+            <Logo size="md" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -532,25 +528,31 @@ export default function Home() {
       <footer className="border-t border-border/70 py-12 text-sm text-muted-foreground">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 sm:flex-row">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-xs">
-              RM
-            </div>
-            <span className="font-heading font-bold text-foreground">
-              RememberMe
-            </span>
-            <span className="text-xs">© {new Date().getFullYear()} All rights reserved.</span>
+            <Logo size="sm" />
+            <span className="text-xs text-muted-foreground ml-2">© {new Date().getFullYear()} RememberMe Inc. All rights reserved.</span>
           </div>
 
-          <div className="flex items-center gap-6">
-            <Link href="/login" className="hover:text-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground transition">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground transition">
+              Terms of Service
+            </Link>
+            <a
+              href="https://github.com/Yadavsandeep-stack/remember-me"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition"
+            >
+              GitHub
+            </a>
+            <Link href="/login" className="hover:text-foreground transition">
               Login
             </Link>
-            <Link href="/register" className="hover:text-foreground">
+            <Link href="/register" className="hover:text-foreground transition">
               Register
             </Link>
-            <a href="#features" className="hover:text-foreground">
-              Features
-            </a>
             <ThemeToggle />
           </div>
         </div>

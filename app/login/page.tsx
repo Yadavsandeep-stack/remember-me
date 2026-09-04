@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,6 +13,18 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function redirectAuthenticatedUser() {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+
+      if (user) router.replace("/dashboard");
+    }
+
+    redirectAuthenticatedUser();
+  }, [router]);
 
   async function handleLogin(
     e: React.FormEvent<HTMLFormElement>
@@ -30,7 +42,11 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      setError(
+        error.message.toLowerCase().includes("email not confirmed")
+          ? "Please confirm your email address before logging in."
+          : "Invalid email or password. Please try again."
+      );
       setLoading(false);
       return;
     }
@@ -81,6 +97,7 @@ export default function LoginPage() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
               className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
             />
@@ -101,6 +118,7 @@ export default function LoginPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
               className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
             />
@@ -123,6 +141,12 @@ export default function LoginPage() {
           </button>
 
         </form>
+
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          <Link href="/forgot-password" className="font-medium text-foreground underline">
+            Forgot your password?
+          </Link>
+        </p>
 
         {/* Register */}
         <p className="mt-6 text-center text-sm text-muted-foreground">

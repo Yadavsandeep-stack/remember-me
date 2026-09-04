@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,21 +30,27 @@ export default function RegisterPage() {
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
-          full_name: name,
+          full_name: name.trim(),
         },
       },
     });
 
     if (error) {
-      setError(error.message);
+      setError("We couldn't create your account. Please check your details and try again.");
       setLoading(false);
+      return;
+    }
+
+    if (data.session) {
+      router.push("/dashboard");
       return;
     }
 
     if (data.user) {
       setMessage(
-        "Account created! Please check your email to verify your account."
+        "Account created. Check your email, confirm your address, then you will be signed in."
       );
     }
 
@@ -90,6 +98,7 @@ export default function RegisterPage() {
               placeholder="Sandeep Yadav"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
               required
               className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
             />
@@ -110,6 +119,7 @@ export default function RegisterPage() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
               className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
             />
@@ -130,6 +140,7 @@ export default function RegisterPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
               required
               minLength={6}
               className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"

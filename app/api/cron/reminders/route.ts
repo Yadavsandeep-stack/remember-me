@@ -1,16 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
-import * as brevo from "@getbrevo/brevo";
+import { BrevoClient } from "@getbrevo/brevo";
 
 // =========================================================
 // BREVO CLIENT
 // =========================================================
 
-const brevoClient = new brevo.TransactionalEmailsApi();
-
-brevoClient.setApiKey(
-  brevo.TransactionalEmailsApiApiKeys.apiKey,
-  process.env.BREVO_API_KEY!
-);
+const brevo = new BrevoClient({
+  apiKey: process.env.BREVO_API_KEY!,
+});
 
 // =========================================================
 // SUPABASE ADMIN CLIENT
@@ -39,7 +36,7 @@ function getToday(timezone: string) {
 // =========================================================
 
 function getMonthDay(dateString: string) {
-  const [year, month, day] = dateString
+  const [, month, day] = dateString
     .split("-")
     .map(Number);
 
@@ -163,10 +160,6 @@ export async function GET(request: Request) {
       });
     }
 
-    // =====================================================
-    // COUNTERS
-    // =====================================================
-
     let sent = 0;
     let skipped = 0;
     let failed = 0;
@@ -229,10 +222,6 @@ export async function GET(request: Request) {
         failed++;
         continue;
       }
-
-      // ===================================================
-      // PERSON NOT FOUND
-      // ===================================================
 
       if (
         !person ||
@@ -345,7 +334,7 @@ export async function GET(request: Request) {
       );
 
       // ===================================================
-      // 9. CHECK IF BIRTHDAY MATCHES
+      // 9. CHECK BIRTHDAY
       // ===================================================
 
       if (
@@ -355,7 +344,7 @@ export async function GET(request: Request) {
           birthdayMonthDay.day
       ) {
         console.log(
-          "Birthday does not match."
+          "Birthday does not match. Skipping."
         );
 
         skipped++;
@@ -400,107 +389,88 @@ export async function GET(request: Request) {
       );
 
       // ===================================================
-      // 11. CREATE BREVO EMAIL
+      // 11. SEND EMAIL USING BREVO
       // ===================================================
 
       try {
-        const sendSmtpEmail =
-          new brevo.SendSmtpEmail();
+        const emailResult =
+          await brevo.transactionalEmails.sendTransacEmail(
+            {
+              sender: {
+                name: "RememberMe",
+                email:
+                  "sandeepy.cs.24@nitj.ac.in",
+              },
 
-        // -------------------------------------------------
-        // SENDER
-        // -------------------------------------------------
+              to: [
+                {
+                  email: userEmail,
+                },
+              ],
 
-        sendSmtpEmail.sender = {
-          name: "RememberMe",
-          email:
-            "sandeepy.cs.24@nitj.ac.in",
-        };
+              subject:
+                `🎂 ${person.name}'s birthday is coming up!`,
 
-        // -------------------------------------------------
-        // RECIPIENT
-        // -------------------------------------------------
+              htmlContent: `
+                <div
+                  style="
+                    font-family: Arial, sans-serif;
+                    max-width: 600px;
+                    margin: auto;
+                    padding: 30px;
+                    background: #ffffff;
+                    color: #222222;
+                  "
+                >
 
-        sendSmtpEmail.to = [
-          {
-            email: userEmail,
-          },
-        ];
+                  <h1>
+                    RememberMe 🎂
+                  </h1>
 
-        // -------------------------------------------------
-        // SUBJECT
-        // -------------------------------------------------
+                  <h2>
+                    ${person.name}'s birthday
+                    is coming up!
+                  </h2>
 
-        sendSmtpEmail.subject =
-          `🎂 ${person.name}'s birthday is coming up!`;
+                  <p>
+                    This is your reminder from
+                    <strong>RememberMe</strong>.
+                  </p>
 
-        // -------------------------------------------------
-        // EMAIL HTML
-        // -------------------------------------------------
+                  <p>
+                    Don't forget to wish
+                    <strong>${person.name}</strong>
+                    a happy birthday! 🎉
+                  </p>
 
-        sendSmtpEmail.htmlContent = `
-          <div
-            style="
-              font-family: Arial, sans-serif;
-              max-width: 600px;
-              margin: auto;
-              padding: 30px;
-              background: #ffffff;
-              color: #222222;
-            "
-          >
+                  <hr />
 
-            <h1>
-              RememberMe 🎂
-            </h1>
+                  <p
+                    style="
+                      color: #777777;
+                      font-size: 14px;
+                    "
+                  >
+                    You received this email because
+                    you created a birthday reminder
+                    in RememberMe.
+                  </p>
 
-            <h2>
-              ${person.name}'s birthday
-              is coming up!
-            </h2>
-
-            <p>
-              This is your reminder from
-              <strong>RememberMe</strong>.
-            </p>
-
-            <p>
-              Don't forget to wish
-              <strong>${person.name}</strong>
-              a happy birthday! 🎉
-            </p>
-
-            <hr />
-
-            <p
-              style="
-                color: #777777;
-                font-size: 14px;
-              "
-            >
-              You received this email because
-              you created a birthday reminder
-              in RememberMe.
-            </p>
-
-          </div>
-        `;
-
-        // =================================================
-        // 12. SEND EMAIL THROUGH BREVO
-        // =================================================
-
-        const emailData =
-          await brevoClient.sendTransacEmail(
-            sendSmtpEmail
+                </div>
+              `,
+            }
           );
+
+        // =================================================
+        // 12. EMAIL SUCCESS
+        // =================================================
 
         console.log(
           "EMAIL SENT SUCCESSFULLY:"
         );
 
         console.log(
-          emailData
+          emailResult
         );
 
         // =================================================
@@ -542,7 +512,7 @@ export async function GET(request: Request) {
       } catch (emailError: any) {
 
         // =================================================
-        // 14. BREVO EMAIL FAILED
+        // 14. EMAIL FAILED
         // =================================================
 
         console.error(

@@ -25,7 +25,9 @@ export const metadata: Metadata = {
   applicationName: "RememberMe",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon.ico",
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
   },
   openGraph: {
     title: "RememberMe — Never Forget an Important Date",

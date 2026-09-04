@@ -1,0 +1,36 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="50%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#EC4899" />
+    </linearGradient>
+    <linearGradient id="cardGradIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.08" />
+    </linearGradient>
+    <filter id="glowIcon" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded rectangle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGradIcon)" />
+
+  <!-- Inner Calendar Body -->
+  <rect x="96" y="138" width="320" height="280" rx="48" fill="url(#cardGradIcon)" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" />
+  
+  <!-- Calendar Header Line -->
+  <line x1="96" y1="218" x2="416" y2="218" stroke="#FFFFFF" stroke-width="14" stroke-opacity="0.8" />
+
+  <!-- Calendar Rings -->
+  <rect x="156" y="98" width="28" height="56" rx="14" fill="#FFFFFF" />
+  <rect x="328" y="98" width="28" height="56" rx="14" fill="#FFFFFF" />
+
+  <!-- Central Heart Knot (Memory & Care) -->
+  <path d="M256 268C226 233 176 248 176 288C176 328 256 368 256 368C256 368 336 328 336 288C336 248 286 233 256 268Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="10" stroke-linejoin="round" />
+
+  <!-- Magic Sparkle -->
+  <path d="M400 80L412 118L450 130L412 142L400 180L388 142L350 130L388 118L400 80Z" fill="#FFD700" filter="url(#glowIcon)" />
+</svg>

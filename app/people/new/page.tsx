@@ -91,7 +91,7 @@ export default function NewPersonPage() {
           </h1>
 
           <p className="mt-2 text-muted-foreground">
-            Save someone's important details and birthday.
+            Save someone&apos;s important details and birthday.
           </p>
 
         </div>
@@ -143,7 +143,7 @@ export default function NewPersonPage() {
             />
 
             <p className="text-xs text-muted-foreground">
-              We'll use this to calculate their upcoming birthday.
+              We&apos;ll use this to calculate their upcoming birthday.
             </p>
 
           </div>
